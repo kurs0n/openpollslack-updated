@@ -1,5 +1,4 @@
 const { App, ExpressReceiver, LogLevel } = require('@slack/bolt');
-const config = require('config');
 
 const { MongoClient } = require('mongodb');
 
@@ -7,13 +6,17 @@ const { Migrations } = require('./utils/migrations');
 
 const { Mutex } = require('async-mutex');
 
-const port = config.get('port');
-const signing_secret = config.get('signing_secret');
-const slackCommand = config.get('command');
-const helpLink = config.get('help_link');
-const supportUrl = config.get('support_url');
+const dotenv  = require('dotenv');
 
-const client = new MongoClient(config.get('mongo_url'));
+dotenv.config();
+
+const port = process.env.PORT;
+const signing_secret = process.env.SIGNING_SECRET;
+const slackCommand = process.env.COMMAND;
+const helpLink = process.env.HELP_LINK
+const supportUrl = process.env.SUPPORT_URL;
+
+const client = new MongoClient(process.env.MONGO_URL);
 let orgCol = null;
 let votesCol = null;
 let closedCol = null;
@@ -25,15 +28,26 @@ const mutexes = {};
 
 try {
   console.log('Connecting to database server...');
-  client.connect();
-  console.log('Connected successfully to server')
-  const db = client.db(config.get('mongo_db_name'));
+  const db = client.db(process.env.MONGO_DB_NAME);
+  
+  migrations = new Migrations(db);
   orgCol = db.collection('token');
   votesCol = db.collection('votes');
   closedCol = db.collection('closed');
   hiddenCol = db.collection('hidden');
+  client.connect().then(async ()=>{
+    console.log('Start database migration.');
+    await migrations.init();
+    await migrations.migrate();
+    console.log('End database migration.')
+  
+    await app.start(process.env.PORT || port);
+  
+    console.log('Bolt app is running!');
+  });
+  console.log('Connected successfully to server')
 
-  migrations = new Migrations(db);
+
 } catch (e) {
   client.close();
   console.error(e)
@@ -42,10 +56,10 @@ try {
 
 const receiver = new ExpressReceiver({
   signingSecret: signing_secret,
-  clientId: config.get('client_id'),
-  clientSecret: config.get('client_secret'),
+  clientId: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET,
   scopes: ['commands', 'chat:write.public', 'chat:write', 'groups:write'],
-  stateSecret: config.get('state_secret'),
+  stateSecret: process.env.STATE_SECRET,
   endpoints: {
     events: '/slack/events',
     commands: '/slack/commands',
@@ -56,10 +70,10 @@ const receiver = new ExpressReceiver({
     redirectUriPath: '/slack/oauth_redirect',
     callbackOptions: {
       success: (installation, installOptions, req, res) => {
-        res.redirect(config.get('oauth_success'));
+        res.redirect(process.env.OAUTH_SUCCESS);
       },
       failure: (error, installOptions , req, res) => {
-        res.redirect(config.get('oauth_failure'));
+        res.redirect(process.env.OAUTH_FAILURE);
       },
     },
   },
@@ -556,14 +570,7 @@ const modalBlockInput = {
 };
 
 (async () => {
-  console.log('Start database migration.');
-  await migrations.init();
-  await migrations.migrate();
-  console.log('End database migration.')
 
-  await app.start(process.env.PORT || port);
-
-  console.log('Bolt app is running!');
 })();
 
 app.action('btn_add_choice', async ({ action, ack, body, client, context }) => {
@@ -845,10 +852,10 @@ app.action('btn_vote', async ({ action, ack, body, context }) => {
         poll = {};
         for (const b of blocks) {
           if (
-            b.hasOwnProperty('accessory')
-            && b.accessory.hasOwnProperty('value')
+            b.hasOwnProperty('elements')
+            && b.elements[0].hasOwnProperty('value')
           ) {
-            const val = JSON.parse(b.accessory.value);
+            const val = JSON.parse(b.elements[0].value);
             poll[val.id] = val.voters ? val.voters : [];
           }
         }
@@ -920,10 +927,10 @@ app.action('btn_vote', async ({ action, ack, body, context }) => {
       for (const i in blocks) {
         b = blocks[i];
         if (
-          b.hasOwnProperty('accessory')
-          && b.accessory.hasOwnProperty('value')
+          b.hasOwnProperty('elements')
+          && b.elements[0].hasOwnProperty('value')
         ) {
-          let val = JSON.parse(b.accessory.value);
+          let val = JSON.parse(b.elements[0].value);
           if (!val.hasOwnProperty('voters')) {
             val.voters = [];
           }
@@ -951,7 +958,7 @@ app.action('btn_vote', async ({ action, ack, body, context }) => {
             }
           }
 
-          blocks[i].accessory.value = JSON.stringify(val);
+          blocks[i].elements[0].value = JSON.stringify(val);
           const nextI = ''+(parseInt(i)+1);
           if (blocks[nextI].hasOwnProperty('elements')) {
             blocks[nextI].elements[0].text = newVoters;
@@ -1507,7 +1514,7 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
     limited: isLimited,
     limit: limit,
     hidden: isHidden,
-    voters: [],
+    voters: [], // expected!: {"user": button_value,points: 8 || 10 || 12}
     id: null,
   };
 
@@ -1521,16 +1528,42 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
         type: 'mrkdwn',
         text: option,
       },
-      accessory: {
-        type: 'button',
-        action_id: 'btn_vote',
-        text: {
-          type: 'plain_text',
-          emoji: true,
-          text: 'Vote',
+    };
+    blocks.push(block);
+    block = {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          action_id: 'btn_vote',
+          text: {
+            type: 'plain_text',
+            emoji: true,
+            text: '8',
+          },
+          value: JSON.stringify(btn_value),
         },
-        value: JSON.stringify(btn_value),
-      },
+        {
+          type: 'button',
+          action_id: 'btn_vote2',
+          text: {
+            type: 'plain_text',
+            emoji: true,
+            text: '10',
+          },
+          value: JSON.stringify(btn_value),
+        },
+        {
+          type: 'button',
+          action_id: 'btn_vote3',
+          text: {
+            type: 'plain_text',
+            emoji: true,
+            text: '12',
+          },
+          value: JSON.stringify(btn_value),
+        },
+      ],    
     };
     blocks.push(block);
     block = {

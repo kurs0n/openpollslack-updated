@@ -2,3 +2,4 @@ node_modules
 config/default.json
 config/open_poll.json
 config/polls.json
+.env
