@@ -1,12 +1,19 @@
-const { App, ExpressReceiver, LogLevel } = require('@slack/bolt');
+import pkg from '@slack/bolt';
+const { App, ExpressReceiver, LogLevel } = pkg;
 
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb'
 
-const { Migrations } = require('./utils/migrations');
+import { Migrations } from "./utils/migrations.js";
 
-const { Mutex } = require('async-mutex');
+import {Mutex} from "async-mutex";
 
-const dotenv  = require('dotenv');
+import dotenv from "dotenv";
+ 
+import { btn_vote8 } from './actions/btn_vote/btn_vote8.js';
+
+import { btn_vote10 } from './actions/btn_vote/btn_vote10.js';
+
+import { btn_vote12 } from './actions/btn_vote/btn_vote12.js';
 
 dotenv.config();
 
@@ -778,248 +785,9 @@ app.action('btn_reveal', async ({ action, ack, body, context }) => {
   });
 });
 
-app.action('btn_vote', async ({ action, ack, body, context }) => {
-  await ack();
-
-  if (
-    !body
-    || !action
-    || !body.user
-    || !body.user.id
-    || !body.message
-    || !body.message.blocks
-    || !body.message.ts
-    || !body.channel
-    || !body.channel.id
-  ) {
-    console.log('error');
-    return;
-  }
-
-  const user_id = body.user.id;
-  const message = body.message;
-  let blocks = message.blocks;
-
-  const channel = body.channel.id;
-
-  let value = JSON.parse(action.value);
-
-  if (!mutexes.hasOwnProperty(`${message.team}/${channel}/${message.ts}`)) {
-    mutexes[`${message.team}/${channel}/${message.ts}`] = new Mutex();
-  }
-
-  let release = null;
-  let countTry = 0;
-  do {
-    ++countTry;
-
-    try {
-      release = await mutexes[`${message.team}/${channel}/${message.ts}`].acquire();
-    } catch (e) {
-      console.log(`[Try #${countTry}] Error while attempt to acquire mutex lock.`, e)
-    }
-  } while (!release && countTry < 3);
-
-  if (release) {
-    try {
-
-      let isClosed = false
-      try {
-        const data = await closedCol.findOne({ channel, ts: message.ts });
-        isClosed = data !== null && data.closed;
-      } catch {}
-
-      if (isClosed) {
-        await app.client.chat.postEphemeral({
-          token: context.botToken,
-          channel: body.channel.id,
-          user: body.user.id,
-          attachments: [],
-          text: "You can't change your votes on closed poll.",
-        });
-        return;
-      }
-
-      let poll = null;
-      const data = await votesCol.findOne({ channel: channel, ts: message.ts });
-      if (data === null) {
-        await votesCol.insertOne({
-          team: message.team,
-          channel,
-          ts: message.ts,
-          votes: {},
-        });
-        poll = {};
-        for (const b of blocks) {
-          if (
-            b.hasOwnProperty('elements')
-            && b.elements[0].hasOwnProperty('value')
-          ) {
-            const val = JSON.parse(b.elements[0].value);
-            poll[val.id] = val.voters ? val.voters : [];
-          }
-        }
-        await votesCol.updateOne({
-          channel,
-          ts: message.ts,
-        }, {
-          $set: {
-            votes: poll,
-          }
-        });
-      } else {
-        poll = data.votes;
-      }
-
-      const isHidden = await getInfos(
-        'hidden',
-        blocks, 
-        {
-          team: message.team,
-          channel,
-          ts: message.ts,
-        },
-      )
-
-      button_id = 3 + (value.id * 2);
-      context_id = 3 + (value.id * 2) + 1;
-      let blockBtn = blocks[button_id];
-      let block = blocks[context_id];
-      let voters = value.voters ? value.voters : [];
-
-      let removeVote = false;
-      if (poll[value.id].includes(user_id)) {
-        removeVote = true;
-      }
-
-      if (value.limited && value.limit) {
-        let voteCount = 0;
-        if (0 !== Object.keys(poll).length) {
-          for (const p in poll) {
-            if (poll[p].includes(user_id)) {
-              ++voteCount;
-            }
-          }
-        }
-
-        if (removeVote) {
-          voteCount -= 1;
-        }
-
-        if (voteCount >= value.limit) {
-          await app.client.chat.postEphemeral({
-            token: context.botToken,
-            channel: channel,
-            user: body.user.id,
-            attachments: [],
-            text: "You can't vote anymore. Remove a vote to choose another option.",
-          });
-          return;
-        }
-      }
-
-      if (removeVote) {
-        poll[value.id] = poll[value.id].filter(voter_id => voter_id != user_id);
-      } else {
-        poll[value.id].push(user_id);
-      }
-
-      for (const i in blocks) {
-        b = blocks[i];
-        if (
-          b.hasOwnProperty('elements')
-          && b.elements[0].hasOwnProperty('value')
-        ) {
-          let val = JSON.parse(b.elements[0].value);
-          if (!val.hasOwnProperty('voters')) {
-            val.voters = [];
-          }
-
-          val.voters = poll[val.id];
-          let newVoters = '';
-
-          if (isHidden) {
-            newVoters = 'Wait for reveal';
-          } else if (poll[val.id].length === 0) {
-            newVoters = 'No votes';
-          } else {
-            newVoters = '';
-            for (const voter of poll[val.id]) {
-              if (!val.anonymous) {
-                newVoters += `<@${voter}> `;
-              }
-            }
-
-            newVoters += poll[val.id].length +' ';
-            if (poll[val.id].length === 1) {
-              newVoters += 'vote';
-            } else {
-              newVoters += 'votes';
-            }
-          }
-
-          blocks[i].elements[0].value = JSON.stringify(val);
-          const nextI = ''+(parseInt(i)+1);
-          if (blocks[nextI].hasOwnProperty('elements')) {
-            blocks[nextI].elements[0].text = newVoters;
-          }
-        }
-      }
-
-      const infosIndex = blocks.findIndex(el => el.type === 'context' && el.elements)
-      blocks[infosIndex].elements = await buildInfosBlocks(
-        blocks,
-        {
-          team: message.team,
-          channel,
-          ts: message.ts,
-        }
-      );
-      blocks[0].accessory.option_groups[0].options =
-        await buildMenu(blocks, {
-          team: message.team,
-          channel,
-          ts: message.ts,
-        });
-
-      await votesCol.updateOne({
-        channel,
-        ts: message.ts,
-      }, {
-        $set: {
-          votes: poll,
-        }
-      });
-
-      await app.client.chat.update({
-        token: context.botToken,
-        channel: channel,
-        ts: message.ts,
-        blocks: blocks,
-        text: message.text,
-      });
-    } catch (e) {
-      console.error(e);
-      await app.client.chat.postEphemeral({
-        token: context.botToken,
-        channel: body.channel.id,
-        user: body.user.id,
-        attachments: [],
-        text: 'An error occurred during vote processing. Please try again in few seconds.',
-      });
-    } finally {
-      release();
-    }
-  } else {
-    await app.client.chat.postEphemeral({
-      token: context.botToken,
-      channel: body.channel.id,
-      user: body.user.id,
-      attachments: [],
-      text: 'An error occurred during vote processing. Please try again in few seconds.',
-    });
-  }
-});
+btn_vote8(app,mutexes,votesCol,getInfos,buildInfosBlocks,buildMenu);
+btn_vote10(app,mutexes,votesCol,getInfos,buildInfosBlocks,buildMenu);
+btn_vote12(app,mutexes,votesCol,getInfos,buildInfosBlocks,buildMenu);
 
 app.shortcut('open_modal_new', async ({ shortcut, ack, context, client }) => {
   await ack();
@@ -1520,7 +1288,7 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
 
   for (let i in options) {
     let option = options[i];
-    btn_value = JSON.parse(JSON.stringify(button_value));
+    const btn_value = JSON.parse(JSON.stringify(button_value));
     btn_value.id = i;
     let block = {
       type: 'section',
@@ -1535,7 +1303,7 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
       elements: [
         {
           type: 'button',
-          action_id: 'btn_vote',
+          action_id: 'btn_vote8',
           text: {
             type: 'plain_text',
             emoji: true,
@@ -1545,7 +1313,7 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
         },
         {
           type: 'button',
-          action_id: 'btn_vote2',
+          action_id: 'btn_vote10',
           text: {
             type: 'plain_text',
             emoji: true,
@@ -1555,7 +1323,7 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
         },
         {
           type: 'button',
-          action_id: 'btn_vote3',
+          action_id: 'btn_vote12',
           text: {
             type: 'plain_text',
             emoji: true,
@@ -1708,7 +1476,7 @@ async function myVotes(body, client, context) {
   let votes = [];
   const userId = body.user.id;
 
-  for (const block of blocks) {
+  for (const block of blocks) { // changes needs to be done here!
     if (
       'section' !== block.type
       || !block.hasOwnProperty('accessory')

@@ -1,4 +1,4 @@
-class Properties {
+export class Properties {
   constructor(db) {
     if (!db) {
       throw new Error('You need to pass a Mongo database as argument.');
@@ -32,4 +32,3 @@ class Properties {
   }
 }
 
-module.exports = { Properties };

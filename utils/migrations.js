@@ -1,8 +1,8 @@
-const { Properties } = require('./properties');
-const cliProgress = require('cli-progress');
-const fs = require('fs');
+import { Properties } from './properties.js';
+import cliProgress from 'cli-progress';
+import fs from 'fs';
 
-class Migrations {
+export class Migrations {
   constructor(db) {
     if (!db) {
       throw new Error('You need to pass a Mongo database as argument.');
@@ -181,5 +181,3 @@ class Migrations {
     console.log('updated database version: 1');
   }
 }
-
-module.exports = { Migrations }
