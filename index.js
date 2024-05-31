@@ -1352,10 +1352,10 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
   blocks.push({
     type: 'context',
     elements: [
-      {
-        type: 'mrkdwn',
-        text: `<${helpLink}|Need help ?>`,
-      },
+      // {
+      //   type: 'mrkdwn',
+      //   text: `<${helpLink}|Need help ?>`,
+      // },
       {
         type: 'mrkdwn',
         text: ':information_source: '+cmd,
