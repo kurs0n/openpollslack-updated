@@ -891,17 +891,17 @@ async function createModal(context, client, trigger_id) {
                   },
                   value: 'anonymous'
                 },
-                {
-                  text: {
-                    type: 'mrkdwn',
-                    text: '*Limited*'
-                  },
-                  description: {
-                    type: 'mrkdwn',
-                    text: '*This option limit the number of choices by user*'
-                  },
-                  value: 'limit'
-                },
+                // {
+                //   text: {
+                //     type: 'mrkdwn',
+                //     text: '*Limited*'
+                //   },
+                //   description: {
+                //     type: 'mrkdwn',
+                //     text: '*This option limit the number of choices by user*'
+                //   },
+                //   value: 'limit'
+                // },
                 {
                   text: {
                     type: 'mrkdwn',
@@ -919,25 +919,25 @@ async function createModal(context, client, trigger_id) {
           {
             type: 'divider',
           },
-          {
-            type: 'input',
-            label: {
-              type: 'plain_text',
-              text: 'Choose your limit',
-            },
-            element: {
-              type: 'plain_text_input',
-              placeholder: {
-                type: 'plain_text',
-                text: 'Type a number',
-              },
-            },
-            optional: true,
-            block_id: 'limit',
-          },
-          {
-            type: 'divider',
-          },
+          // {
+          //   type: 'input',
+          //   label: {
+          //     type: 'plain_text',
+          //     text: 'Choose your limit',
+          //   },
+          //   element: {
+          //     type: 'plain_text_input',
+          //     placeholder: {
+          //       type: 'plain_text',
+          //       text: 'Type a number',
+          //     },
+          //   },
+          //   optional: true,
+          //   block_id: 'limit',
+          // },
+          // {
+          //   type: 'divider',
+          // },
           {
             type: 'input',
             label: {
@@ -953,9 +953,9 @@ async function createModal(context, client, trigger_id) {
             },
             block_id: 'question',
           },
-          {
-            type: 'divider',
-          },
+          // {
+          //   type: 'divider',
+          // },
           {
             type: 'section',
             text: {
