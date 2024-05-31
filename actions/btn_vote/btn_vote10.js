@@ -116,29 +116,26 @@ export const btn_vote10 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildM
               }
             }
       
-            if (value.limited && value.limit) {
-              let voteCount = 0;
-              if (0 !== Object.keys(poll).length) {
-                for (const p in poll) {
-                  if (poll[p].includes(user_id)) {
-                    ++voteCount;
+            let alreadyVoted = false;
+
+            for (const question in poll) {
+                poll[question].forEach(async item => {
+                  if (item.userId === user_id && item.points === 10 && question != value.id) {
+                    console.log(`Match found in question ${question}:`, item);
+                    alreadyVoted = true;
                   }
-                }
-              }
-      
-              if (removeVote) {
-                voteCount -= 1;
-              }
-      
-              if (voteCount >= value.limit) {
-                await app.client.chat.postEphemeral({
-                  token: context.botToken,
-                  channel: channel,
-                  user: body.user.id,
-                  attachments: [],
-                  text: "You can't vote anymore. Remove a vote to choose another option.",
                 });
-                return;
+
+                if (alreadyVoted) {
+                  await app.client.chat.postEphemeral({
+                      token: context.botToken,
+                      channel: channel,
+                      user: body.user.id,
+                      attachments: [],
+                      text: "You can't vote anymore for 10 points. Remove a vote to choose another option.",
+                  });
+                  release();
+                  return;
               }
             }
       
