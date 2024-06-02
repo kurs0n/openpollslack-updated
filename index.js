@@ -1476,30 +1476,29 @@ async function myVotes(body, client, context) {
   let votes = [];
   const userId = body.user.id;
 
-  for (const block of blocks) { // changes needs to be done here!
+  for (let i=0; i<blocks.length; i++) { // changes needs to be done here!
     if (
-      'section' !== block.type
-      || !block.hasOwnProperty('accessory')
-      || !block.accessory.hasOwnProperty('action_id')
-      || 'btn_vote' !== block.accessory.action_id
-      || !block.accessory.hasOwnProperty('value')
-      || !block.hasOwnProperty('text')
-      || !block.text.hasOwnProperty('text')
+      blocks[i].type != "actions" ||
+      blocks[i]?.elements?.length != 3
     ) {
       continue;
     }
-    const value = JSON.parse(block.accessory.value);
-
-    if (value.voters.includes(userId)) {
-      votes.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: block.text.text,
-        },
-      });
-      votes.push({
-        type: 'divider',
+    const elements = blocks[i].elements
+    for(const element of elements){
+      const value = JSON.parse(element.value);
+      value.voters.map(voter=>{
+        if(voter.userId == userId){ 
+          votes.push({
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: blocks[i-1].text.text + " " +"points: " + element.text.text
+            }
+          });
+          votes.push({
+            type: 'divider'
+          })
+        }
       });
     }
   }
@@ -1619,13 +1618,18 @@ async function usersVotes(body, client, context, value) {
   } catch(e) {
   }
 
-  for (const block of blocks) {
+  for (let i=0; i<blocks.length; i++) {
     if (
-      block.hasOwnProperty('accessory')
-      && block.accessory.hasOwnProperty('value')
+      blocks[i].type == "actions" ||
+      blocks[i]?.elements?.length == 3
+
     ) {
-      const value = JSON.parse(block.accessory.value);
-      const voters = poll ? (poll[value.id] || []) : [];
+      const elements = blocks[i].elements;
+      let voters = null;
+      for (const element of elements) {
+        const value = JSON.parse(element.value);
+        voters = poll ? (poll[value.id] || []) : [];
+      }
       votes.push({
         type: 'divider',
       });
@@ -1633,7 +1637,7 @@ async function usersVotes(body, client, context, value) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: block.text.text,
+          text: blocks[i-1].text.text,
         },
       });
       votes.push({
@@ -1643,7 +1647,7 @@ async function usersVotes(body, client, context, value) {
           text: !voters.length
             ? 'No voters'
             : voters.map(el => {
-                return `<@${el}>`;
+                return `<@${el.userId}> points: ${el.points}`;
               }).join(', '),
         }],
       });
@@ -1753,7 +1757,7 @@ async function revealOrHideVotes(body, context, value) {
         });
         poll = {};
         for (const b of blocks) {
-          if (
+          if (  // probably this is not used!
             b.hasOwnProperty('accessory')
             && b.accessory.hasOwnProperty('value')
           ) {
@@ -1796,37 +1800,45 @@ async function revealOrHideVotes(body, context, value) {
       for (const i in blocks) {
         let b = blocks[i];
         if (
-          b.hasOwnProperty('accessory')
-          && b.accessory.hasOwnProperty('value')
-        ) {
-          let val = JSON.parse(b.accessory.value);
-          val.hidden = isHidden;
-
-          val.voters = poll[val.id];
+          b.type == "actions" ||
+          b?.elements?.length == 3
+        ) { // b.elements[] -> iteration by value storing all voters from 3 options and displaying it below! 
+          let val;
           let newVoters = '';
-
-          if (isHidden) {
-            newVoters = 'Wait for reveal';
-          } else {
-            if (poll[val.id].length === 0) {
-              newVoters = 'No votes';
-            } else {
-              newVoters = '';
-              for (const voter of poll[val.id]) {
-                if (!val.anonymous) {
-                  newVoters += `<@${voter}> `;
+          for (const j in b.elements){
+            val = JSON.parse(b.elements[j].value);
+            val.hidden = isHidden;
+  
+            val.voters = poll[val.id];
+  
+            if (isHidden) {
+              newVoters = 'Wait for reveal';
+            } else { // here logic!!!!! 
+              if (poll[val.id].length === 0) {
+                newVoters = 'No votes';
+              } else {
+                newVoters = '';
+                for (const voter of poll[val.id]) {
+                  if (!val.anonymous) {
+                    newVoters += `<@${voter.userId}> points: ${voter.points}, `;
+                  }
                 }
+  
+                const vLength = poll[val.id].length;
+                newVoters += `${poll[val.id].length} vote${vLength === 1 ? '' : 's'}`;
               }
-
-              const vLength = poll[val.id].length;
-              newVoters += `${poll[val.id].length} vote${vLength === 1 ? '' : 's'}`;
             }
+
+          }
+          // blocks[i].accessory.value = JSON.stringify(val);
+          let sum = 0;
+          for(const vote of poll[val.id]){ 
+            sum+=vote.points;
           }
 
-          blocks[i].accessory.value = JSON.stringify(val);
           const nextI = ''+(parseInt(i)+1);
           if (blocks[nextI].hasOwnProperty('elements')) {
-            blocks[nextI].elements[0].text = newVoters;
+            blocks[nextI].elements[0].text = newVoters+ ", sum: "+ sum;
           }
         }
       }
@@ -1994,14 +2006,16 @@ async function closePoll(body, client, context, value) {
           const block = blocks[i];
 
           if (
-            block.hasOwnProperty('accessory')
-            && block.accessory.hasOwnProperty('value')
+            block.type == "actions" &&
+            block?.elements?.length == 3
           ) {
-            const value = JSON.parse(block.accessory.value);
+            for(const j in block.elements){
+              const value = JSON.parse(block.elements[j].value);
 
-            value.closed = false;
-
-            blocks[i].accessory.value = JSON.stringify(value);
+              value.closed = false;
+  
+              blocks[i].elements[i].value = JSON.stringify(value);
+            }
           }
         }
       } else {
@@ -2009,14 +2023,16 @@ async function closePoll(body, client, context, value) {
           const block = blocks[i];
 
           if (
-            block.hasOwnProperty('accessory')
-            && block.accessory.hasOwnProperty('value')
+            block.type == "actions" &&
+            block?.elements?.length == 3
           ) {
-            const value = JSON.parse(block.accessory.value);
+            for (const j in block.elements){
+              const value = JSON.parse(block.elements[j].value);
 
-            value.closed = true;
-
-            blocks[i].accessory.value = JSON.stringify(value);
+              value.closed = true;
+              
+              blocks[i].elements[j].value = JSON.stringify(value);
+            }
           }
         }
       }
@@ -2131,29 +2147,32 @@ async function getInfos(infos, blocks, pollInfos) {
     }
   }
 
-  for (const block of blocks) {
+  for (const block of blocks) { // in order to hide it!
     if (
-      block.hasOwnProperty('accessory')
-      && block.accessory.hasOwnProperty('value')
+      block?.type == "actions" &&
+      block?.elements?.length == 3
     ) {
-      const value = JSON.parse(block.accessory.value);
+      for(const element of block.elements){
+        const value = JSON.parse(element.value);
 
-      if (multi) {
-        for (const i of infos) {
-          if (result[i] === null && value.hasOwnProperty(i)) {
-            result[i] = value[i];
+        if (multi) {
+          for (const i of infos) {
+            if (result[i] === null && value.hasOwnProperty(i)) {
+              result[i] = value[i];
+            }
+          }
+  
+          if (!Object.keys(result).find(i => result[i] === null)) {
+            break;
+          }
+        } else {
+          if (value.hasOwnProperty(infos)) {
+            result = value[infos];
+            break;
           }
         }
-
-        if (!Object.keys(result).find(i => result[i] === null)) {
-          break;
-        }
-      } else {
-        if (value.hasOwnProperty(infos)) {
-          result = value[infos];
-          break;
-        }
       }
+
     }
   }
 
