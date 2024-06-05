@@ -1492,7 +1492,7 @@ async function myVotes(body, client, context) {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: blocks[i-1].text.text + " " +"points: " + element.text.text
+              text: blocks[i-1].text.text + " " +"points: " + voter.points
             }
           });
           votes.push({
@@ -1813,7 +1813,7 @@ async function revealOrHideVotes(body, context, value) {
   
             if (isHidden) {
               newVoters = 'Wait for reveal';
-            } else { // here logic!!!!! 
+            } else { 
               if (poll[val.id].length === 0) {
                 newVoters = 'No votes';
               } else {
@@ -1838,7 +1838,12 @@ async function revealOrHideVotes(body, context, value) {
 
           const nextI = ''+(parseInt(i)+1);
           if (blocks[nextI].hasOwnProperty('elements')) {
-            blocks[nextI].elements[0].text = newVoters+ ", sum: "+ sum;
+            if(isHidden){
+              blocks[nextI].elements[0].text = newVoters
+            }
+            else{
+              blocks[nextI].elements[0].text = newVoters+ ", sum: "+ sum;
+            }
           }
         }
       }

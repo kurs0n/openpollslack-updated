@@ -189,7 +189,11 @@ export const btn_vote10 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildM
                 blocks[i].elements[0].value = JSON.stringify(val);
                 const nextI = ''+(parseInt(i)+1);
                 if (blocks[nextI].hasOwnProperty('elements')) {
-                  blocks[nextI].elements[0].text = newVoters + ", sum: "+sum;
+                  if(isHidden){
+                    blocks[nextI].elements[0].text = newVoters 
+                  } else {
+                    blocks[nextI].elements[0].text = newVoters + ", sum: "+sum;
+                  }
                 }
               }
             }
