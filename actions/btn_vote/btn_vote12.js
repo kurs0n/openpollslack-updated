@@ -144,6 +144,13 @@ export const btn_vote12 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildM
               
             } else {
               poll[value.id].push({userId: user_id,points: 12});
+              await app.client.chat.postEphemeral({
+                token: context.botToken,
+                channel: channel,
+                user: body.user.id,
+                attachments: [],
+                text: `You've voted for 12 points`,
+            });
             }
       
             for (const i in blocks) {
