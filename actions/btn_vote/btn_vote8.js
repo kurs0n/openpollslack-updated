@@ -194,12 +194,13 @@ export const btn_vote8 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildMe
                 for(const vote of poll[val.id]){ 
                   sum+=vote.points;
                 }
-      
+                
+                let amount_of_votes = poll[val.id].length
                 blocks[i].elements[0].value = JSON.stringify(val);
                 const nextI = ''+(parseInt(i)+1);
                 if (blocks[nextI].hasOwnProperty('elements')) {
                   if(isHidden){
-                    blocks[nextI].elements[0].text = newVoters;
+                    blocks[nextI].elements[0].text = newVoters + `, votes: ${amount_of_votes}`;
                   }
                   else {
                     blocks[nextI].elements[0].text = newVoters + ", sum: "+sum;
