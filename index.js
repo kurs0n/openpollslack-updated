@@ -1191,12 +1191,6 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
         text: 'Delete the poll',
       },
       value: JSON.stringify({action: 'btn_delete', user: userId}),
-    }, {
-      text: {
-        type: 'plain_text',
-        text: 'Close the poll',
-      },
-      value: JSON.stringify({action: 'btn_close', user: userId}),
     }],
   }, {
     label: {
@@ -1211,22 +1205,6 @@ function createPollView(question, options, isAnonymous, isLimited, limit, isHidd
       value: JSON.stringify({action: 'btn_my_votes', user: userId}),
     }],
   }];
-
-  if (supportUrl) {
-    staticSelectElements.push({
-      label: {
-        type: 'plain_text',
-        text: 'Support',
-      },
-      options: [{
-        text: {
-          type: 'plain_text',
-          text: 'Love Open Poll ?',
-        },
-        value: JSON.stringify({action: 'btn_love_open_poll', user: userId}),
-      }],
-    });
-  }
 
   blocks.push({
     type: 'section',
