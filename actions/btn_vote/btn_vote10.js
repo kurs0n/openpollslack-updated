@@ -104,10 +104,13 @@ export const btn_vote10 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildM
             )
       
             let button_id = 3 + (value.id * 2);
+            // console.log(blocks)
+            // console.log(value)
+            // console.log(value.id)
             let context_id = 3 + (value.id * 2) + 1;
             let blockBtn = blocks[button_id];
             let block = blocks[context_id];
-            console.log(block)
+            // console.log(block)
             let voters = value.voters ? value.voters : [];
       
             let removeVote = false;
@@ -144,12 +147,19 @@ export const btn_vote10 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildM
               
             } else {
               poll[value.id].push({userId: user_id,points: 10});
+              let question = ''
+              if (value.id == 0){
+                question = blocks[3].text.text
+              }
+              else {
+                question = blocks[ (4 + (value.id ) * 4) - 1].text.text
+              }
               await app.client.chat.postEphemeral({
                 token: context.botToken,
                 channel: channel,
                 user: body.user.id,
                 attachments: [],
-                text: `You've voted for 10 points`,
+                text: `You've vote for 10 points on option ${question}`,
             });
             }
       

@@ -146,12 +146,21 @@ export const btn_vote8 = (app,mutexes,votesCol,getInfos,buildInfosBlocks,buildMe
               poll[value.id] = poll[value.id].filter(temp => temp.userId != user_id);
             } else {
               poll[value.id].push({userId: user_id,points: 8});
+
+              let question = ''
+              if (value.id == 0){
+                question = blocks[3].text.text
+              }
+              else {
+                question = blocks[ (4 + (value.id ) * 4) - 1].text.text
+              }
+
               await app.client.chat.postEphemeral({
                 token: context.botToken,
                 channel: channel,
                 user: body.user.id,
                 attachments: [],
-                text: `You've voted for 8 points`,
+                text: `You've vote for 8 points on option ${question}`,
             });
             }
       
