@@ -181,37 +181,6 @@ app.event('app_home_opened', async ({ event, client, context }) => {
             },
           },
           {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "The options are optionals settings to apply to the poll.\nDon't surround options with quotes.",
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "*Anonymous*\n`anonymous` inside command.\nThis option allow you to hide voters.",
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "*Limited choices*\n`limit x` inside command. Replace \"x\" by desired number.\nThis option limit maximum choice for each users. If \"2\", each user can only select 2 choices.",
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "*Hidden*\n`hidden` inside command.\nThis option hide the number of votes for each choice. You can reveal votes with a button at bottom of poll. Only the creator can reveal votes.",
-            },
-          },
-          {
-            type: "divider",
-          },
-          {
             type: "header",
             text: {
               type: "plain_text",
@@ -869,56 +838,7 @@ async function createModal(context, client, trigger_id) {
           {
             type: 'divider',
           },
-          {
-            type: 'section',
-            block_id: 'options',
-            text: {
-              type: 'mrkdwn',
-              text: "Choose your poll's options"
-            },
-            accessory: {
-              type: 'checkboxes',
-              action_id: 'modal_poll_options',
-              options: [
-                {
-                  text: {
-                    type: 'mrkdwn',
-                    text: '*Anonymous*'
-                  },
-                  description: {
-                    type: 'mrkdwn',
-                    text: '*This option makes your poll anonymous*'
-                  },
-                  value: 'anonymous'
-                },
-                // {
-                //   text: {
-                //     type: 'mrkdwn',
-                //     text: '*Limited*'
-                //   },
-                //   description: {
-                //     type: 'mrkdwn',
-                //     text: '*This option limit the number of choices by user*'
-                //   },
-                //   value: 'limit'
-                // },
-                {
-                  text: {
-                    type: 'mrkdwn',
-                    text: '*Hidden*'
-                  },
-                  description: {
-                    type: 'mrkdwn',
-                    text: '*This option hide the votes until reveal*'
-                  },
-                  value: 'hidden'
-                }
-              ]
-            }
-          },
-          {
-            type: 'divider',
-          },
+
           // {
           //   type: 'input',
           //   label: {
